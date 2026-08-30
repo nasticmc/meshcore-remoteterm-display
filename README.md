@@ -106,6 +106,28 @@ On first boot, or after the configured Wi-Fi fails to connect for 30 seconds, th
 
 Saving the form stores Wi-Fi, RemoteTerm host/port, transport, and optional Basic Auth values in ESP32 non-volatile storage and restarts the device. Credentials are never written into the repository. A later reset/clear-settings control can be added without changing the network protocol.
 
+## Serial configuration
+
+At 115200 baud, the USB serial console accepts configuration commands. Type
+`help` for the complete list. Examples:
+
+```text
+show
+set wifi-ssid EastMesh
+set wifi-password your-password
+set host 192.168.1.50
+set port 8000
+set tls off
+set rotation 2
+save
+reboot
+```
+
+`show` never prints Wi-Fi or RemoteTerm passwords. Settings are changed in
+RAM until `save` or `reboot` is used. `clear` removes saved NVS settings but
+does not restart the device; use `reboot` afterwards to apply compile-time
+defaults.
+
 ## RemoteTerm compatibility
 
 The parser intentionally accepts both bare arrays and envelope responses such as `{ "channels": [...] }` / `{ "messages": [...] }`. WebSocket message events are also parsed defensively because RemoteTerm's event envelope has changed over its development history.

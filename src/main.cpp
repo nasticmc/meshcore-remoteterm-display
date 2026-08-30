@@ -17,6 +17,104 @@ RemoteTermClient remoteTerm(appState, runtimeConfig);
 unsigned long lastWifiAttempt = 0;
 bool clientStarted = false;
 unsigned long wifiStartedAt = 0;
+String serialLine;
+
+void serialHelp() {
+  Serial.println("RemoteTerm serial configuration");
+  Serial.println("  help                         Show this help");
+  Serial.println("  show                         Show settings (secrets redacted)");
+  Serial.println("  set wifi-ssid <value>        Set Wi-Fi SSID");
+  Serial.println("  set wifi-password <value>    Set Wi-Fi password (write-only)");
+  Serial.println("  set host <value>              Set RemoteTerm host");
+  Serial.println("  set port <1-65535>            Set RemoteTerm port");
+  Serial.println("  set tls <on|off>              Set HTTPS/WSS transport");
+  Serial.println("  set username <value>          Set Basic Auth username");
+  Serial.println("  set remoteterm-password <value>  Set Basic Auth password (write-only)");
+  Serial.println("  set rotation <0-7>            Set display rotation");
+  Serial.println("  save                         Save settings to NVS");
+  Serial.println("  clear                        Clear saved settings (keeps running values)");
+  Serial.println("  reboot                       Save settings and restart");
+  Serial.println("  ap                           Start the setup access point");
+}
+
+void serialShow() {
+  Serial.println("--- RemoteTerm settings ---");
+  Serial.printf("wifi-ssid: %s\n", runtimeConfig.wifiSsid.c_str());
+  Serial.println("wifi-password: <redacted>");
+  Serial.printf("host: %s\n", runtimeConfig.remoteHost.c_str());
+  Serial.printf("port: %u\n", static_cast<unsigned>(runtimeConfig.remotePort));
+  Serial.printf("tls: %s\n", runtimeConfig.remoteTls ? "on" : "off");
+  Serial.printf("username: %s\n", runtimeConfig.remoteUsername.c_str());
+  Serial.println("remoteterm-password: <redacted>");
+  Serial.printf("rotation: %u\n", static_cast<unsigned>(runtimeConfig.displayRotation));
+  Serial.printf("channel-selection: %s (%u selected)\n",
+                runtimeConfig.channelSelectionConfigured ? "configured" : "all",
+                static_cast<unsigned>(runtimeConfig.selectedChannelCount));
+  Serial.printf("firmware: %s\n", REMOTETERM_FIRMWARE_VERSION);
+}
+
+String serialArgument(const String& line, const char* command) {
+  const String prefix = String(command) + " ";
+  if (!line.startsWith(prefix)) return "";
+  String value = line.substring(prefix.length());
+  value.trim();
+  return value;
+}
+
+void serialCommand(String line) {
+  line.trim();
+  if (!line.length()) return;
+  if (line == "help") { serialHelp(); return; }
+  if (line == "show") { serialShow(); return; }
+  if (line == "save") { saveRuntimeConfig(runtimeConfig); Serial.println("Settings saved"); return; }
+  if (line == "clear") { clearRuntimeConfig(); Serial.println("Saved settings cleared; reboot to apply defaults"); return; }
+  if (line == "reboot") { saveRuntimeConfig(runtimeConfig); Serial.println("Settings saved; restarting"); delay(250); ESP.restart(); return; }
+  if (line == "ap") { setupAccessPoint(runtimeConfig); return; }
+
+  String value = serialArgument(line, "set wifi-ssid");
+  if (value.length()) { runtimeConfig.wifiSsid = value; Serial.println("Wi-Fi SSID updated"); return; }
+  value = serialArgument(line, "set wifi-password");
+  if (value.length()) { runtimeConfig.wifiPassword = value; Serial.println("Wi-Fi password updated"); return; }
+  value = serialArgument(line, "set host");
+  if (value.length()) { runtimeConfig.remoteHost = value; Serial.println("RemoteTerm host updated"); return; }
+  value = serialArgument(line, "set port");
+  if (value.length()) {
+    const long port = value.toInt();
+    if (port >= 1 && port <= 65535) { runtimeConfig.remotePort = static_cast<uint16_t>(port); Serial.println("RemoteTerm port updated"); }
+    else Serial.println("Invalid port");
+    return;
+  }
+  value = serialArgument(line, "set tls");
+  if (value.length()) {
+    if (value == "on" || value == "off") { runtimeConfig.remoteTls = value == "on"; Serial.println("TLS setting updated"); }
+    else Serial.println("Use set tls on or set tls off");
+    return;
+  }
+  value = serialArgument(line, "set username");
+  if (value.length()) { runtimeConfig.remoteUsername = value; Serial.println("Basic Auth username updated"); return; }
+  value = serialArgument(line, "set remoteterm-password");
+  if (value.length()) { runtimeConfig.remotePassword = value; Serial.println("Basic Auth password updated"); return; }
+  value = serialArgument(line, "set rotation");
+  if (value.length()) {
+    const long rotation = value.toInt();
+    if (rotation >= 0 && rotation <= 7) { runtimeConfig.displayRotation = static_cast<uint8_t>(rotation); Serial.println("Rotation updated; reboot to apply"); }
+    else Serial.println("Invalid rotation; use 0 through 7");
+    return;
+  }
+  Serial.println("Unknown command; type help");
+}
+
+void serialLoop() {
+  while (Serial.available()) {
+    const char c = static_cast<char>(Serial.read());
+    if (c == '\n' || c == '\r') {
+      serialCommand(serialLine);
+      serialLine = "";
+    } else if (serialLine.length() < 240) {
+      serialLine += c;
+    }
+  }
+}
 
 void connectWifi() {
   if (WiFi.status() == WL_CONNECTED) return;
@@ -34,6 +132,7 @@ void setup() {
   Serial.begin(115200);
   delay(250);
   loadRuntimeConfig(runtimeConfig);
+  Serial.println("Type 'help' for serial configuration commands");
   ui.begin();
   ui.render(true);
   if (runtimeConfig.hasWifi()) connectWifi();
@@ -41,6 +140,7 @@ void setup() {
 }
 
 void loop() {
+  serialLoop();
   bool nowConnected = WiFi.status() == WL_CONNECTED;
   setupAccessPointLoop();
   if (!nowConnected && !setupAccessPointActive() && wifiStartedAt && millis() - wifiStartedAt >= WIFI_CONNECT_TIMEOUT_MS) {
