@@ -41,6 +41,7 @@ int compareVersions(String left, String right) {
 }
 
 bool downloadAndInstall(const String& url, const String& releaseTag) {
+  Serial.printf("OTA download start: %s\n", url.c_str());
   WiFiClientSecure client;
 #if TLS_INSECURE
   client.setInsecure();
@@ -49,21 +50,29 @@ bool downloadAndInstall(const String& url, const String& releaseTag) {
   http.setConnectTimeout(OTA_CONNECT_TIMEOUT_MS);
   http.setTimeout(OTA_READ_TIMEOUT_MS);
   http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-  if (!http.begin(client, url)) return false;
+  if (!http.begin(client, url)) {
+    Serial.println("OTA download error: HTTP begin failed");
+    return false;
+  }
   const int code = http.GET();
+  Serial.printf("OTA download HTTP status: %d, length: %d\n", code, http.getSize());
   if (code != HTTP_CODE_OK) {
     http.end();
+    Serial.println("OTA download error: unexpected HTTP status");
     return false;
   }
   const int length = http.getSize();
   if (!Update.begin(length > 0 ? length : UPDATE_SIZE_UNKNOWN)) {
     http.end();
+    Serial.printf("OTA update error: Update.begin failed (%s)\n", Update.errorString());
     return false;
   }
   const size_t written = Update.writeStream(*http.getStreamPtr());
+  Serial.printf("OTA download bytes: %u\n", static_cast<unsigned>(written));
   const bool complete = (length <= 0 || written == static_cast<size_t>(length)) && Update.end(true);
   http.end();
   if (!complete || !Update.isFinished()) {
+    Serial.printf("OTA update error: incomplete or unfinished (%s)\n", Update.errorString());
     Update.abort();
     return false;
   }
@@ -77,6 +86,7 @@ void checkForUpdate() {
   if (checking || WiFi.status() != WL_CONNECTED) return;
   checking = true;
   lastCheck = millis();
+  Serial.printf("OTA check start: current=%s profile=%s\n", REMOTETERM_FIRMWARE_VERSION, profileName().c_str());
   WiFiClientSecure client;
 #if TLS_INSECURE
   client.setInsecure();
@@ -86,14 +96,24 @@ void checkForUpdate() {
   http.setTimeout(OTA_READ_TIMEOUT_MS);
   const String api = "https://api.github.com/repos/" REMOTETERM_GITHUB_REPOSITORY "/releases?per_page=20";
   http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
-  if (!http.begin(client, api)) { checking = false; return; }
+  if (!http.begin(client, api)) {
+    Serial.println("OTA check error: HTTP begin failed");
+    checking = false;
+    return;
+  }
   http.addHeader("Accept", "application/vnd.github+json");
   http.addHeader("User-Agent", "meshcore-remoteterm-display");
-  if (http.GET() != HTTP_CODE_OK) { http.end(); checking = false; return; }
+  const int code = http.GET();
+  Serial.printf("OTA check HTTP status: %d\n", code);
+  if (code != HTTP_CODE_OK) { http.end(); checking = false; return; }
 
   JsonDocument releases;
-  if (deserializeJson(releases, http.getStream())) { http.end(); checking = false; return; }
+  if (deserializeJson(releases, http.getStream())) {
+    Serial.println("OTA check error: release JSON parse failed");
+    http.end(); checking = false; return;
+  }
   http.end();
+  Serial.printf("OTA releases received: %u\n", static_cast<unsigned>(releases.size()));
   const String wanted = "remoteterm-display-" + profileName() + ".bin";
   String selectedTag;
   String selectedUrl;
@@ -111,14 +131,22 @@ void checkForUpdate() {
     }
   }
   if (selectedTag.length() && selectedUrl.length()) {
+    Serial.printf("OTA selected release: %s asset=%s\n", selectedTag.c_str(), wanted.c_str());
     Serial.printf("OTA update available: %s -> %s\n", REMOTETERM_FIRMWARE_VERSION, selectedTag.c_str());
     downloadAndInstall(selectedUrl, selectedTag);
+  } else {
+    Serial.printf("OTA no compatible update found for asset=%s\n", wanted.c_str());
   }
   checking = false;
 }
 }
 
 void otaBegin() { lastCheck = 0; }
+
+void otaCheckNow() {
+  lastCheck = millis();
+  checkForUpdate();
+}
 
 void otaLoop() {
   if (WiFi.status() != WL_CONNECTED) return;

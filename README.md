@@ -129,6 +129,12 @@ RAM until `save` or `reboot` is used. `clear` removes saved NVS settings but
 does not restart the device; use `reboot` afterwards to apply compile-time
 defaults.
 
+The web settings page also has **Check for OTA update**, which triggers the
+same public GitHub release check immediately. Watch the serial console for
+the HTTP status, selected release, asset, download length, and any update
+error. The device restarts automatically only after a verified image is
+written.
+
 ## RemoteTerm compatibility
 
 The parser intentionally accepts both bare arrays and envelope responses such as `{ "channels": [...] }` / `{ "messages": [...] }`. WebSocket message events are also parsed defensively because RemoteTerm's event envelope has changed over its development history.

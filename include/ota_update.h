@@ -7,3 +7,4 @@
 // when its release tag is newer than REMOTETERM_FIRMWARE_VERSION.
 void otaBegin();
 void otaLoop();
+void otaCheckNow();

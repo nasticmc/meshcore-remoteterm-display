@@ -4,6 +4,7 @@
 #include <Preferences.h>
 #include <WebServer.h>
 #include <WiFi.h>
+#include "ota_update.h"
 
 namespace {
 WebServer server(80);
@@ -50,12 +51,23 @@ String page() {
   }
   if (!c.cachedChannelCount) out += "<p><small>No cached channels yet. Save the server settings, allow a connection, then revisit this page.</small></p>";
   out += "</div><button type=submit>Save and restart</button></form>";
+  out += "<form method=post action=/ota style=margin-top:1rem><button type=submit>Check for OTA update</button></form>";
   out += "<p><small>Setup AP: connect to RemoteTerm-XXXX with password \"configure\" and open http://192.168.4.1.</small></p></body></html>";
   return out;
 }
 
 void handleRoot() { server.send(200, "text/html", page()); }
 void handleNotFound() { server.send(200, "text/html", page()); }
+
+void handleOta() {
+  if (WiFi.status() != WL_CONNECTED) {
+    server.send(503, "text/plain", "OTA requires an active Wi-Fi connection");
+    return;
+  }
+  server.send(200, "text/html", "<html><body><h1>OTA check started</h1><p>Watch the serial console for the result. The device will restart if an update is installed.</p></body></html>");
+  delay(100);
+  otaCheckNow();
+}
 
 void handleSave() {
   if (!activeConfig || !server.hasArg("ssid") || !server.hasArg("host")) {
@@ -89,6 +101,7 @@ void handleSave() {
 void registerServer() {
   server.on("/", HTTP_GET, handleRoot);
   server.on("/save", HTTP_POST, handleSave);
+  server.on("/ota", HTTP_POST, handleOta);
   server.onNotFound(handleNotFound);
   server.begin();
 }
