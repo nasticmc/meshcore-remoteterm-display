@@ -92,7 +92,10 @@ void handleSave() {
     activeConfig->selectedChannelKeys[activeConfig->selectedChannelCount++] = server.arg(i);
     activeConfig->channelSelectionConfigured = true;
   }
-  saveRuntimeConfig(*activeConfig);
+  if (!saveRuntimeConfig(*activeConfig)) {
+    server.send(500, "text/plain", "Settings could not be saved to NVS; device was not restarted");
+    return;
+  }
   server.send(200, "text/html", "<html><body><h1>Saved</h1><p>Restarting...</p></body></html>");
   delay(600);
   ESP.restart();
@@ -121,7 +124,9 @@ void loadRuntimeConfig(RuntimeConfig& config) {
   config.cachedChannelCount = 0;
 
   Preferences p;
-  p.begin("remoteterm", true);
+  const bool opened = p.begin("remoteterm", true);
+  Serial.printf("NVS read namespace: %s\n", opened ? "available" : "missing/unavailable");
+  if (!opened) return;
   config.wifiSsid = p.getString("wifi_ssid", config.wifiSsid);
   config.wifiPassword = p.getString("wifi_pass", config.wifiPassword);
   config.remoteHost = p.getString("rt_host", config.remoteHost);
@@ -145,7 +150,10 @@ void loadRuntimeConfig(RuntimeConfig& config) {
 
 bool saveRuntimeConfig(const RuntimeConfig& c) {
   Preferences p;
-  if (!p.begin("remoteterm", false)) return false;
+  if (!p.begin("remoteterm", false)) {
+    Serial.println("NVS write namespace: open failed");
+    return false;
+  }
   bool ok = true;
   p.putString("wifi_ssid", c.wifiSsid); ok = p.isKey("wifi_ssid") && ok;
   p.putString("wifi_pass", c.wifiPassword); ok = p.isKey("wifi_pass") && ok;
@@ -163,13 +171,32 @@ bool saveRuntimeConfig(const RuntimeConfig& c) {
   p.putString("channels", selected); ok = p.isKey("channels") && ok;
   p.putBool("channels_set", c.channelSelectionConfigured); ok = p.isKey("channels_set") && ok;
   p.end();
+  Serial.printf("NVS write result: %s\n", ok ? "verified" : "failed");
   return ok;
 }
 
 void clearRuntimeConfig() {
   Preferences p;
-  p.begin("remoteterm", false);
-  p.clear();
+  if (!p.begin("remoteterm", false)) {
+    Serial.println("NVS clear: namespace open failed");
+    return;
+  }
+  const bool cleared = p.clear();
+  p.end();
+  Serial.printf("NVS clear: %s\n", cleared ? "complete" : "failed");
+}
+
+void printRuntimeConfigNvsStatus(Stream& output) {
+  Preferences p;
+  if (!p.begin("remoteterm", true)) {
+    output.println("NVS namespace: unavailable");
+    output.println("NVS diagnosis: Preferences.begin failed");
+    return;
+  }
+  output.println("NVS namespace: available");
+  output.printf("NVS free entries: %u\n", static_cast<unsigned>(p.freeEntries()));
+  const char* keys[] = {"wifi_ssid", "wifi_pass", "rt_host", "rt_port", "rt_tls", "rt_user", "rt_pass", "rotation", "channels", "channels_set"};
+  for (const char* key : keys) output.printf("NVS key %-13s: %s\n", key, p.isKey(key) ? "present" : "missing");
   p.end();
 }
 

@@ -8,6 +8,7 @@
 void loadRuntimeConfig(RuntimeConfig& config);
 bool saveRuntimeConfig(const RuntimeConfig& config);
 void clearRuntimeConfig();
+void printRuntimeConfigNvsStatus(Stream& output);
 
 // Starts the configuration page on the setup AP.
 bool setupAccessPoint(RuntimeConfig& config);

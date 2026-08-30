@@ -23,6 +23,7 @@ void serialHelp() {
   Serial.println("RemoteTerm serial configuration");
   Serial.println("  help                         Show this help");
   Serial.println("  show                         Show settings (secrets redacted)");
+  Serial.println("  nvs-status                   Diagnose NVS namespace and saved keys");
   Serial.println("  set wifi-ssid <value>        Set Wi-Fi SSID");
   Serial.println("  set wifi-password <value>    Set Wi-Fi password (write-only)");
   Serial.println("  set host <value>              Set RemoteTerm host");
@@ -66,6 +67,7 @@ void serialCommand(String line) {
   if (!line.length()) return;
   if (line == "help") { serialHelp(); return; }
   if (line == "show") { serialShow(); return; }
+  if (line == "nvs-status") { printRuntimeConfigNvsStatus(Serial); return; }
   if (line == "save") { Serial.println(saveRuntimeConfig(runtimeConfig) ? "Settings saved" : "Settings save failed"); return; }
   if (line == "clear") { clearRuntimeConfig(); Serial.println("Saved settings cleared; reboot to apply defaults"); return; }
   if (line == "reboot") { const bool saved = saveRuntimeConfig(runtimeConfig); Serial.println(saved ? "Settings saved; restarting" : "Settings save failed; not restarting"); if (saved) { delay(250); ESP.restart(); } return; }
