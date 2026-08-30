@@ -143,25 +143,27 @@ void loadRuntimeConfig(RuntimeConfig& config) {
   p.end();
 }
 
-void saveRuntimeConfig(const RuntimeConfig& c) {
+bool saveRuntimeConfig(const RuntimeConfig& c) {
   Preferences p;
-  p.begin("remoteterm", false);
-  p.putString("wifi_ssid", c.wifiSsid);
-  p.putString("wifi_pass", c.wifiPassword);
-  p.putString("rt_host", c.remoteHost);
-  p.putUShort("rt_port", c.remotePort);
-  p.putBool("rt_tls", c.remoteTls);
-  p.putString("rt_user", c.remoteUsername);
-  p.putString("rt_pass", c.remotePassword);
-  p.putUChar("rotation", c.displayRotation);
+  if (!p.begin("remoteterm", false)) return false;
+  bool ok = true;
+  p.putString("wifi_ssid", c.wifiSsid); ok = p.isKey("wifi_ssid") && ok;
+  p.putString("wifi_pass", c.wifiPassword); ok = p.isKey("wifi_pass") && ok;
+  p.putString("rt_host", c.remoteHost); ok = p.isKey("rt_host") && ok;
+  p.putUShort("rt_port", c.remotePort); ok = p.isKey("rt_port") && ok;
+  p.putBool("rt_tls", c.remoteTls); ok = p.isKey("rt_tls") && ok;
+  p.putString("rt_user", c.remoteUsername); ok = p.isKey("rt_user") && ok;
+  p.putString("rt_pass", c.remotePassword); ok = p.isKey("rt_pass") && ok;
+  p.putUChar("rotation", c.displayRotation); ok = p.isKey("rotation") && ok;
   String selected;
   for (size_t i = 0; i < c.selectedChannelCount; ++i) {
     if (i) selected += '\x1f';
     selected += c.selectedChannelKeys[i];
   }
-  p.putString("channels", selected);
-  p.putBool("channels_set", c.channelSelectionConfigured);
+  p.putString("channels", selected); ok = p.isKey("channels") && ok;
+  p.putBool("channels_set", c.channelSelectionConfigured); ok = p.isKey("channels_set") && ok;
   p.end();
+  return ok;
 }
 
 void clearRuntimeConfig() {

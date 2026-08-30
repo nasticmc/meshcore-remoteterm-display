@@ -124,9 +124,10 @@ save
 reboot
 ```
 
-`show` never prints Wi-Fi or RemoteTerm passwords. Settings are changed in
-RAM until `save` or `reboot` is used. `clear` removes saved NVS settings but
-does not restart the device; use `reboot` afterwards to apply compile-time
+`show` never prints Wi-Fi or RemoteTerm passwords. Every valid `set` command
+now saves immediately to NVS; `save` remains available as an explicit retry,
+and `reboot` saves again before restarting. `clear` removes saved NVS settings
+but does not restart the device; use `reboot` afterwards to apply compile-time
 defaults.
 
 The web settings page also has **Check for OTA update**, which triggers the

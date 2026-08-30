@@ -66,38 +66,38 @@ void serialCommand(String line) {
   if (!line.length()) return;
   if (line == "help") { serialHelp(); return; }
   if (line == "show") { serialShow(); return; }
-  if (line == "save") { saveRuntimeConfig(runtimeConfig); Serial.println("Settings saved"); return; }
+  if (line == "save") { Serial.println(saveRuntimeConfig(runtimeConfig) ? "Settings saved" : "Settings save failed"); return; }
   if (line == "clear") { clearRuntimeConfig(); Serial.println("Saved settings cleared; reboot to apply defaults"); return; }
-  if (line == "reboot") { saveRuntimeConfig(runtimeConfig); Serial.println("Settings saved; restarting"); delay(250); ESP.restart(); return; }
+  if (line == "reboot") { const bool saved = saveRuntimeConfig(runtimeConfig); Serial.println(saved ? "Settings saved; restarting" : "Settings save failed; not restarting"); if (saved) { delay(250); ESP.restart(); } return; }
   if (line == "ap") { setupAccessPoint(runtimeConfig); return; }
 
   String value = serialArgument(line, "set wifi-ssid");
-  if (value.length()) { runtimeConfig.wifiSsid = value; Serial.println("Wi-Fi SSID updated"); return; }
+  if (value.length()) { runtimeConfig.wifiSsid = value; Serial.println(saveRuntimeConfig(runtimeConfig) ? "Wi-Fi SSID updated and saved" : "Wi-Fi SSID updated but save failed"); return; }
   value = serialArgument(line, "set wifi-password");
-  if (value.length()) { runtimeConfig.wifiPassword = value; Serial.println("Wi-Fi password updated"); return; }
+  if (value.length()) { runtimeConfig.wifiPassword = value; Serial.println(saveRuntimeConfig(runtimeConfig) ? "Wi-Fi password updated and saved" : "Wi-Fi password updated but save failed"); return; }
   value = serialArgument(line, "set host");
-  if (value.length()) { runtimeConfig.remoteHost = value; Serial.println("RemoteTerm host updated"); return; }
+  if (value.length()) { runtimeConfig.remoteHost = value; Serial.println(saveRuntimeConfig(runtimeConfig) ? "RemoteTerm host updated and saved" : "RemoteTerm host updated but save failed"); return; }
   value = serialArgument(line, "set port");
   if (value.length()) {
     const long port = value.toInt();
-    if (port >= 1 && port <= 65535) { runtimeConfig.remotePort = static_cast<uint16_t>(port); Serial.println("RemoteTerm port updated"); }
+    if (port >= 1 && port <= 65535) { runtimeConfig.remotePort = static_cast<uint16_t>(port); Serial.println(saveRuntimeConfig(runtimeConfig) ? "RemoteTerm port updated and saved" : "RemoteTerm port updated but save failed"); }
     else Serial.println("Invalid port");
     return;
   }
   value = serialArgument(line, "set tls");
   if (value.length()) {
-    if (value == "on" || value == "off") { runtimeConfig.remoteTls = value == "on"; Serial.println("TLS setting updated"); }
+    if (value == "on" || value == "off") { runtimeConfig.remoteTls = value == "on"; Serial.println(saveRuntimeConfig(runtimeConfig) ? "TLS setting updated and saved" : "TLS setting updated but save failed"); }
     else Serial.println("Use set tls on or set tls off");
     return;
   }
   value = serialArgument(line, "set username");
-  if (value.length()) { runtimeConfig.remoteUsername = value; Serial.println("Basic Auth username updated"); return; }
+  if (value.length()) { runtimeConfig.remoteUsername = value; Serial.println(saveRuntimeConfig(runtimeConfig) ? "Basic Auth username updated and saved" : "Basic Auth username updated but save failed"); return; }
   value = serialArgument(line, "set remoteterm-password");
-  if (value.length()) { runtimeConfig.remotePassword = value; Serial.println("Basic Auth password updated"); return; }
+  if (value.length()) { runtimeConfig.remotePassword = value; Serial.println(saveRuntimeConfig(runtimeConfig) ? "Basic Auth password updated and saved" : "Basic Auth password updated but save failed"); return; }
   value = serialArgument(line, "set rotation");
   if (value.length()) {
     const long rotation = value.toInt();
-    if (rotation >= 0 && rotation <= 7) { runtimeConfig.displayRotation = static_cast<uint8_t>(rotation); Serial.println("Rotation updated; reboot to apply"); }
+    if (rotation >= 0 && rotation <= 7) { runtimeConfig.displayRotation = static_cast<uint8_t>(rotation); Serial.println(saveRuntimeConfig(runtimeConfig) ? "Rotation updated and saved; reboot to apply" : "Rotation updated but save failed"); }
     else Serial.println("Invalid rotation; use 0 through 7");
     return;
   }

@@ -66,5 +66,5 @@ struct RuntimeConfig {
 };
 
 void loadRuntimeConfig(RuntimeConfig& config);
-void saveRuntimeConfig(const RuntimeConfig& config);
+bool saveRuntimeConfig(const RuntimeConfig& config);
 void clearRuntimeConfig();

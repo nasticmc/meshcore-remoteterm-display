@@ -6,7 +6,7 @@
 // Runtime configuration is persisted in ESP32 NVS. It is intentionally kept
 // separate from the display project and contains no credentials in source.
 void loadRuntimeConfig(RuntimeConfig& config);
-void saveRuntimeConfig(const RuntimeConfig& config);
+bool saveRuntimeConfig(const RuntimeConfig& config);
 void clearRuntimeConfig();
 
 // Starts the configuration page on the setup AP.
