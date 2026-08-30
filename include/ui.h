@@ -19,12 +19,14 @@ class RemoteTermUI {
   int32_t _touchStartY = 0;
   unsigned long _touchStartAt = 0;
   bool _settingsMode = false;
+  int _messageScroll = 0;
 
   uint32_t stateHash() const;
   void drawHeader();
   void drawMessages();
   void drawFooter();
   void drawSettings();
+  void drawClock();
   void drawWrapped(const String& text, int x, int& y, int width, int maxLines, uint16_t color, float fontSize);
   String shortTime(const String& iso) const;
 };

@@ -1,5 +1,7 @@
 #include "ui.h"
 #include <Arduino.h>
+#include <WiFi.h>
+#include <time.h>
 
 namespace {
 // EastMesh dark-mode palette shared with the Hermes project. These are RGB565
@@ -35,11 +37,40 @@ uint32_t RemoteTermUI::stateHash() const {
   mix(_state.apiHealthy);
   mix(_settingsMode);
   mix(_config.selectedChannelCount);
+  mix(_state.timeValid);
+  mix(_state.timeEpoch);
   if (_state.messageCount) {
     mix((uint32_t)_state.messages[_state.messageCount - 1].id);
     mix(_state.messages[_state.messageCount - 1].text.length());
   }
   return h;
+}
+
+void RemoteTermUI::drawClock() {
+  const int w = _lcd.width();
+  const int h = _lcd.height();
+  _lcd.fillRect(0, 47, w, h - 89, C_BG);
+  _lcd.setTextDatum(lgfx::middle_center);
+  if (_state.timeValid) {
+    struct tm now;
+    time_t epoch = static_cast<time_t>(_state.timeEpoch);
+    localtime_r(&epoch, &now);
+    char timeText[8];
+    strftime(timeText, sizeof(timeText), "%H:%M", &now);
+    _lcd.setTextSize(w >= 400 ? 5 : 3);
+    _lcd.setTextColor(C_ACCENT, C_BG);
+    _lcd.drawString(timeText, w / 2, h / 2 - 12);
+    char dateText[32];
+    strftime(dateText, sizeof(dateText), "%a %d %b %Y", &now);
+    _lcd.setTextSize(1);
+    _lcd.setTextColor(C_MUTED, C_BG);
+    _lcd.drawString(dateText, w / 2, h / 2 + 28);
+  } else {
+    _lcd.setTextSize(2);
+    _lcd.setTextColor(C_MUTED, C_BG);
+    _lcd.drawString(WiFi.status() == WL_CONNECTED ? "SYNCING TIME" : "WAITING FOR WI-FI", w / 2, h / 2);
+  }
+  _lcd.setTextDatum(lgfx::top_left);
 }
 
 String RemoteTermUI::shortTime(const String& iso) const {
@@ -112,7 +143,8 @@ void RemoteTermUI::drawMessages() {
   // Work backwards from newest messages, estimating each card height, then
   // render the subset that fits from top to bottom.
   int available = bottom - top - 4;
-  int start = (int)_state.messageCount - 1;
+  int start = (int)_state.messageCount - 1 - _messageScroll;
+  if (start < 0) start = 0;
   int used = 0;
   for (; start >= 0; --start) {
     const MessageInfo& m = _state.messages[start];
@@ -221,7 +253,8 @@ void RemoteTermUI::render(bool force) {
     return;
   }
   drawHeader();
-  drawMessages();
+  if (_state.messageCount == 0) drawClock();
+  else drawMessages();
   drawFooter();
 }
 
@@ -263,17 +296,27 @@ int RemoteTermUI::pollChannelGesture() {
     }
     return 0;
   }
-  if (_touchStartX < 34 && _touchStartY >= _lcd.height() - 50) {
+  if (_touchStartX < 60 && _touchStartY >= _lcd.height() - 50) {
     _settingsMode = true;
     render(true);
     return 2;
   }
   int dx = (int)x - _touchStartX;
+  int dy = (int)y - _touchStartY;
   unsigned long held = millis() - _touchStartAt;
   if (held > 1200) return 0;
 
   // Swipe anywhere, or tap left/right footer thirds.
-  if (abs(dx) > 45) return dx < 0 ? +1 : -1;
+  if (abs(dy) > 35 && abs(dy) > abs(dx) && _state.messageCount) {
+    _messageScroll += dy < 0 ? 1 : -1;
+    _messageScroll = min(max(0, _messageScroll), max(0, static_cast<int>(_state.messageCount) - 1));
+    render(true);
+    return 0;
+  }
+  if (abs(dx) > 45) {
+    _messageScroll = 0;
+    return dx < 0 ? +1 : -1;
+  }
   if (_touchStartY >= _lcd.height() - 55) {
     if (_touchStartX < _lcd.width() / 3) return -1;
     if (_touchStartX > (_lcd.width() * 2) / 3) return +1;

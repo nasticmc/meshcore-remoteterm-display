@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <time.h>
 #include "config.h"
 #include "config_manager.h"
 #include "display_config.h"
@@ -17,6 +18,7 @@ RemoteTermClient remoteTerm(appState, runtimeConfig);
 unsigned long lastWifiAttempt = 0;
 bool clientStarted = false;
 unsigned long wifiStartedAt = 0;
+unsigned long lastClockSync = 0;
 String serialLine;
 
 void serialHelp() {
@@ -130,6 +132,20 @@ void connectWifi() {
   appState.status = "Connecting Wi-Fi";
 }
 
+void updateClock() {
+  if (WiFi.status() == WL_CONNECTED && (lastClockSync == 0 || millis() - lastClockSync >= 3600000UL)) {
+    configTime(10 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+    lastClockSync = millis();
+  }
+  struct tm now;
+  if (getLocalTime(&now, 10)) {
+    appState.timeValid = now.tm_year >= (2024 - 1900);
+    appState.timeEpoch = static_cast<uint32_t>(mktime(&now));
+  } else {
+    appState.timeValid = false;
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   delay(250);
@@ -144,6 +160,7 @@ void setup() {
 void loop() {
   serialLoop();
   bool nowConnected = WiFi.status() == WL_CONNECTED;
+  updateClock();
   setupAccessPointLoop();
   if (!nowConnected && !setupAccessPointActive() && wifiStartedAt && millis() - wifiStartedAt >= WIFI_CONNECT_TIMEOUT_MS) {
     appState.status = "Setup AP";

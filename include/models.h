@@ -27,5 +27,7 @@ struct AppState {
   bool wifiConnected = false;
   bool wsConnected = false;
   bool apiHealthy = false;
+  bool timeValid = false;
+  uint32_t timeEpoch = 0;
   String status = "Starting";
 };
