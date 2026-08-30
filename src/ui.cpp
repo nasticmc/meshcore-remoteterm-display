@@ -2,12 +2,14 @@
 #include <Arduino.h>
 
 namespace {
-constexpr uint16_t C_BG = 0x0841;
-constexpr uint16_t C_PANEL = 0x10A2;
-constexpr uint16_t C_TEXT = 0xFFFF;
-constexpr uint16_t C_MUTED = 0xA514;
-constexpr uint16_t C_ACCENT = 0x07E0;
-constexpr uint16_t C_WARN = 0xFD20;
+// EastMesh dark-mode palette shared with the Hermes project. These are RGB565
+// values for the LovyanGFX renderer, kept here so this project remains standalone.
+constexpr uint16_t C_BG = 0x2104;      // #222222
+constexpr uint16_t C_PANEL = 0x3186;   // #303030
+constexpr uint16_t C_TEXT = 0xE75E;    // #E6EAF0
+constexpr uint16_t C_MUTED = 0x9D36;   // #9AA4B2
+constexpr uint16_t C_ACCENT = 0x350C;  // #36A167
+constexpr uint16_t C_WARN = 0xDCC5;    // #D99A28
 }
 
 RemoteTermUI::RemoteTermUI(RemoteTermDisplay& display, AppState& state) : _lcd(display), _state(state) {}

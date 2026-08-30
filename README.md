@@ -14,6 +14,8 @@ Receive-only MeshCore channel viewer for the Freenove ESP32-S3 Display (FNK0104B
 - Receive-only: there is deliberately no send-message UI or POST request.
 - Optional HTTP Basic Auth support.
 - HTTP/WS and HTTPS/WSS configuration.
+- Uses the EastMesh dark-mode theme: `#222222` background, `#303030` panels,
+  `#E6EAF0` text, `#9AA4B2` muted text, and `#36A167` accent green.
 
 ## Supported hardware
 
