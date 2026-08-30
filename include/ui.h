@@ -7,7 +7,7 @@ class RemoteTermUI {
   RemoteTermUI(RemoteTermDisplay& display, AppState& state, RuntimeConfig& config);
   void begin();
   void render(bool force = false);
-  int pollChannelGesture(); // -1 previous, +1 next, 2 settings, 3 save, 0 none
+  int pollChannelGesture(); // channel +/-; 2 settings; 3 save; 4 older; 5 newer
 
  private:
   RemoteTermDisplay& _lcd;
@@ -27,6 +27,7 @@ class RemoteTermUI {
   void drawFooter();
   void drawSettings();
   void drawClock();
+  void drawButton(int x, int y, int width, int height, const char* label, bool accent = false);
   void drawWrapped(const String& text, int x, int& y, int width, int maxLines, uint16_t color, float fontSize);
   String shortTime(const String& iso) const;
 };

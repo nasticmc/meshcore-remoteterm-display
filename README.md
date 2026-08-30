@@ -92,6 +92,11 @@ pio run -e fnk0104s -t upload
 - Tap `>` in the footer: next channel
 - Tap the gear in the lower-left footer: open channel settings
 
+The footer now shows bounded action buttons: `SET`, `UP`, `DOWN`, `PREV`, and
+`NEXT`. Touch actions are accepted only inside those button rectangles; the
+message viewport accepts vertical swipes for scrolling but does not contain
+the footer controls.
+
 In channel settings, tap rows to toggle channels and tap `SAVE`. The selected
 channel keys are stored in NVS and the device restarts. The web settings page
 also provides display rotation, channel selection, and Select all / Clear all

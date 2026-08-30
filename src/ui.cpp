@@ -80,6 +80,16 @@ String RemoteTermUI::shortTime(const String& iso) const {
   return iso;
 }
 
+void RemoteTermUI::drawButton(int x, int y, int width, int height, const char* label, bool accent) {
+  _lcd.fillRoundRect(x, y, width, height, 4, accent ? C_ACCENT : C_BG);
+  _lcd.drawRoundRect(x, y, width, height, 4, C_MUTED);
+  _lcd.setTextDatum(lgfx::middle_center);
+  _lcd.setTextSize(1);
+  _lcd.setTextColor(accent ? C_BG : C_TEXT, accent ? C_ACCENT : C_BG);
+  _lcd.drawString(label, x + width / 2, y + height / 2);
+  _lcd.setTextDatum(lgfx::top_left);
+}
+
 void RemoteTermUI::drawHeader() {
   int w = _lcd.width();
   _lcd.fillRect(0, 0, w, 42, C_PANEL);
@@ -90,6 +100,17 @@ void RemoteTermUI::drawHeader() {
   _lcd.print("MESHCORE REMOTETERM");
 
   String state = _state.wsConnected ? "LIVE" : (_state.wifiConnected ? "POLL" : "WIFI");
+  if (_state.timeValid) {
+    time_t epoch = static_cast<time_t>(_state.timeEpoch);
+    struct tm now;
+    localtime_r(&epoch, &now);
+    char clockText[6];
+    strftime(clockText, sizeof(clockText), "%H:%M", &now);
+    _lcd.setTextColor(C_ACCENT, C_PANEL);
+    _lcd.setTextSize(1);
+    _lcd.setCursor(w >= 400 ? w / 2 - 15 : w / 2 - 12, w >= 400 ? 15 : 11);
+    _lcd.print(clockText);
+  }
   _lcd.setTextColor(_state.wsConnected ? C_ACCENT : C_WARN, C_PANEL);
   int tw = _lcd.textWidth(state);
   _lcd.setCursor(w - tw - 10, w >= 400 ? 10 : 8);
@@ -186,18 +207,15 @@ void RemoteTermUI::drawFooter() {
   int h = _lcd.height();
   _lcd.fillRect(0, h - 40, w, 40, C_PANEL);
   _lcd.fillRect(0, h - 40, w, 2, C_ACCENT);
-  _lcd.fillCircle(17, h - 20, 8, C_MUTED);
-  _lcd.fillCircle(17, h - 20, 3, C_PANEL);
-  _lcd.fillRect(15, h - 33, 5, 5, C_MUTED);
-  _lcd.fillRect(15, h - 12, 5, 5, C_MUTED);
-  _lcd.fillRect(4, h - 22, 5, 5, C_MUTED);
-  _lcd.fillRect(25, h - 22, 5, 5, C_MUTED);
-  _lcd.setTextSize(w >= 400 ? 2 : 1);
-  _lcd.setTextColor(C_MUTED, C_PANEL);
-  _lcd.setCursor(32, h - 28);
-  _lcd.print("<");
-  _lcd.setCursor(w - (w >= 400 ? 18 : 14), h - 28);
-  _lcd.print(">");
+  const int y = h - 34;
+  const int bh = 26;
+  const int bw = w >= 400 ? 42 : 34;
+  const int gap = 4;
+  drawButton(6, y, bw, bh, "SET");
+  drawButton(6 + bw + gap, y, bw, bh, "UP");
+  drawButton(6 + (bw + gap) * 2, y, bw, bh, "DOWN");
+  drawButton(w - bw * 2 - gap - 6, y, bw, bh, "PREV");
+  drawButton(w - bw - 6, y, bw, bh, "NEXT", true);
 
   String name = "--";
   if (_state.channelCount && _state.selectedChannel >= 0 && _state.selectedChannel < (int)_state.channelCount)
@@ -296,18 +314,38 @@ int RemoteTermUI::pollChannelGesture() {
     }
     return 0;
   }
-  if (_touchStartX < 60 && _touchStartY >= _lcd.height() - 50) {
-    _settingsMode = true;
-    render(true);
-    return 2;
+  const int footerY = _lcd.height() - 34;
+  const int buttonHeight = 26;
+  const int buttonWidth = _lcd.width() >= 400 ? 42 : 34;
+  const int buttonGap = 4;
+  if (_touchStartY >= footerY && _touchStartY < footerY + buttonHeight) {
+    if (_touchStartX >= 6 && _touchStartX < 6 + buttonWidth) {
+      _settingsMode = true;
+      render(true);
+      return 2;
+    }
+    if (_touchStartX >= 6 + buttonWidth + buttonGap && _touchStartX < 6 + (buttonWidth + buttonGap) * 2) {
+      _messageScroll = min(max(0, _messageScroll + 1), max(0, static_cast<int>(_state.messageCount) - 1));
+      render(true);
+      return 4;
+    }
+    if (_touchStartX >= 6 + (buttonWidth + buttonGap) * 2 && _touchStartX < 6 + (buttonWidth + buttonGap) * 3) {
+      _messageScroll = max(0, _messageScroll - 1);
+      render(true);
+      return 5;
+    }
+    if (_touchStartX >= _lcd.width() - buttonWidth * 2 - buttonGap - 6 && _touchStartX < _lcd.width() - buttonWidth - buttonGap - 6) return -1;
+    if (_touchStartX >= _lcd.width() - buttonWidth - 6) return +1;
+    return 0;
   }
+
   int dx = (int)x - _touchStartX;
   int dy = (int)y - _touchStartY;
   unsigned long held = millis() - _touchStartAt;
   if (held > 1200) return 0;
 
-  // Swipe anywhere, or tap left/right footer thirds.
-  if (abs(dy) > 35 && abs(dy) > abs(dx) && _state.messageCount) {
+  // Swipe only inside the message viewport; footer actions are button-only.
+  if (_touchStartY >= 47 && _touchStartY < footerY && abs(dy) > 35 && abs(dy) > abs(dx) && _state.messageCount) {
     _messageScroll += dy < 0 ? 1 : -1;
     _messageScroll = min(max(0, _messageScroll), max(0, static_cast<int>(_state.messageCount) - 1));
     render(true);

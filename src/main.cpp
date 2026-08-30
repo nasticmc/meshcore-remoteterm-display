@@ -134,7 +134,9 @@ void connectWifi() {
 
 void updateClock() {
   if (WiFi.status() == WL_CONNECTED && (lastClockSync == 0 || millis() - lastClockSync >= 3600000UL)) {
-    configTime(10 * 3600, 0, "pool.ntp.org", "time.nist.gov");
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    setenv("TZ", "AEST-10AEDT,M10.1.0,M4.1.0/3", 1);
+    tzset();
     lastClockSync = millis();
   }
   struct tm now;
