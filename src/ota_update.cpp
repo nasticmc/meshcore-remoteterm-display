@@ -84,29 +84,35 @@ void checkForUpdate() {
   HTTPClient http;
   http.setConnectTimeout(OTA_CONNECT_TIMEOUT_MS);
   http.setTimeout(OTA_READ_TIMEOUT_MS);
-  const String api = "https://api.github.com/repos/" REMOTETERM_GITHUB_REPOSITORY "/releases/latest";
+  const String api = "https://api.github.com/repos/" REMOTETERM_GITHUB_REPOSITORY "/releases?per_page=20";
   http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
   if (!http.begin(client, api)) { checking = false; return; }
   http.addHeader("Accept", "application/vnd.github+json");
   http.addHeader("User-Agent", "meshcore-remoteterm-display");
   if (http.GET() != HTTP_CODE_OK) { http.end(); checking = false; return; }
 
-  JsonDocument release;
-  if (deserializeJson(release, http.getStream())) { http.end(); checking = false; return; }
+  JsonDocument releases;
+  if (deserializeJson(releases, http.getStream())) { http.end(); checking = false; return; }
   http.end();
-  const String tag = release["tag_name"] | "";
-  if (!tag.length() || compareVersions(REMOTETERM_FIRMWARE_VERSION, tag) >= 0) {
-    checking = false;
-    return;
-  }
   const String wanted = "remoteterm-display-" + profileName() + ".bin";
-  for (JsonObject asset : release["assets"].as<JsonArray>()) {
-    if (String(asset["name"] | "") == wanted) {
-      const String url = asset["browser_download_url"] | "";
-      Serial.printf("OTA update available: %s -> %s\n", REMOTETERM_FIRMWARE_VERSION, tag.c_str());
-      downloadAndInstall(url, tag);
-      break;
+  String selectedTag;
+  String selectedUrl;
+  for (JsonObject release : releases.as<JsonArray>()) {
+    const String tag = release["tag_name"] | "";
+    if (!tag.length() || compareVersions(REMOTETERM_FIRMWARE_VERSION, tag) >= 0) continue;
+    for (JsonObject asset : release["assets"].as<JsonArray>()) {
+      if (String(asset["name"] | "") == wanted) {
+        if (!selectedTag.length() || compareVersions(selectedTag, tag) < 0) {
+          selectedTag = tag;
+          selectedUrl = asset["browser_download_url"] | "";
+        }
+        break;
+      }
     }
+  }
+  if (selectedTag.length() && selectedUrl.length()) {
+    Serial.printf("OTA update available: %s -> %s\n", REMOTETERM_FIRMWARE_VERSION, selectedTag.c_str());
+    downloadAndInstall(selectedUrl, selectedTag);
   }
   checking = false;
 }
