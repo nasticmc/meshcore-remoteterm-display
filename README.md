@@ -37,7 +37,7 @@ pio run -e fnk0104b
 pio run -e fnk0104s
 ```
 
-The 4-inch target uses the Freenove-compatible RGB colour order and 80 MHz write / 20 MHz read SPI settings. The 2.8-inch target uses the ILI9341 profile and its native BGR order.
+The 4-inch target uses the Freenove-compatible RGB colour order and 80 MHz write / 20 MHz read SPI settings. The 2.8-inch target uses the ILI9341 profile and its native BGR order. Display and touch rotations are applied together at runtime.
 
 ## Configure
 

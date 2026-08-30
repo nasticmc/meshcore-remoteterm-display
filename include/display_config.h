@@ -1,5 +1,6 @@
 #pragma once
 #include <LovyanGFX.hpp>
+#include "config.h"
 
 #ifndef REMOTETERM_DISPLAY_PROFILE
 #define REMOTETERM_DISPLAY_PROFILE 1042
@@ -30,6 +31,12 @@ class RemoteTermDisplay : public lgfx::LGFX_Device {
   lgfx::Touch_FT5x06 _touch;
 
  public:
+  void setTouchRotation(uint8_t rotation) {
+    auto cfg = _touch.config();
+    cfg.offset_rotation = rotation & 7;
+    _touch.config(cfg);
+  }
+
   RemoteTermDisplay() {
     {
       auto cfg = _bus.config();
@@ -96,6 +103,8 @@ class RemoteTermDisplay : public lgfx::LGFX_Device {
 #endif
       cfg.pin_int = PIN_TOUCH_INT;
       cfg.bus_shared = false;
+      // Runtime display rotation is applied to the touch matrix in UI::begin.
+      // Keep the hardware baseline neutral here.
       cfg.offset_rotation = 0;
       cfg.i2c_port = 0;
       cfg.i2c_addr = 0x38;
