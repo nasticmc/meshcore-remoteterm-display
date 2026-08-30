@@ -168,7 +168,8 @@ If the LCD image works but touch direction is wrong on a hardware revision, adju
 
 MeshCore RemoteTerm Display never writes to the RemoteTerm radio and has no message-send implementation. It only uses read endpoints plus the WebSocket feed.
 
-The merged factory image is intended for first installation or recovery. Writing
+Each GitHub release contains both application-only images for OTA and complete
+merged factory images for USB recovery. The merged factory image is intended for first installation or recovery. Writing
 it from offset `0x0` covers the NVS partition and can remove saved settings.
 For normal upgrades use the GitHub Release application asset or another
 app-only update method; those preserve NVS. After USB recovery, expect to
