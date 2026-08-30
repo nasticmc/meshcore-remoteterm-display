@@ -1,0 +1,16 @@
+#pragma once
+
+#include <Arduino.h>
+#include "config.h"
+
+// Runtime configuration is persisted in ESP32 NVS. It is intentionally kept
+// separate from the display project and contains no credentials in source.
+void loadRuntimeConfig(RuntimeConfig& config);
+void saveRuntimeConfig(const RuntimeConfig& config);
+void clearRuntimeConfig();
+
+// Runs the local configuration AP until a form is saved. Returns true when the
+// device was restarted after saving new settings.
+bool setupAccessPoint(RuntimeConfig& config);
+void setupAccessPointLoop();
+bool setupAccessPointActive();

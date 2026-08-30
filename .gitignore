@@ -1,0 +1,5 @@
+.pio/
+.venv/
+.vscode/
+include/config.h
+.DS_Store
