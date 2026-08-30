@@ -94,7 +94,7 @@ void checkForUpdate() {
   HTTPClient http;
   http.setConnectTimeout(OTA_CONNECT_TIMEOUT_MS);
   http.setTimeout(OTA_READ_TIMEOUT_MS);
-  const String api = "https://api.github.com/repos/" REMOTETERM_GITHUB_REPOSITORY "/releases?per_page=20";
+  const String api = "https://api.github.com/repos/" REMOTETERM_GITHUB_REPOSITORY "/releases/latest";
   http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
   if (!http.begin(client, api)) {
     Serial.println("OTA check error: HTTP begin failed");
@@ -107,35 +107,35 @@ void checkForUpdate() {
   Serial.printf("OTA check HTTP status: %d\n", code);
   if (code != HTTP_CODE_OK) { http.end(); checking = false; return; }
 
-  JsonDocument releases;
-  if (deserializeJson(releases, http.getStream())) {
+  JsonDocument release;
+  if (deserializeJson(release, http.getStream())) {
     Serial.println("OTA check error: release JSON parse failed");
     http.end(); checking = false; return;
   }
   http.end();
-  Serial.printf("OTA releases received: %u\n", static_cast<unsigned>(releases.size()));
+  Serial.printf("OTA release received: tag=%s draft=%s prerelease=%s assets=%u\n",
+                String(release["tag_name"] | "").c_str(),
+                (release["draft"] | false) ? "yes" : "no",
+                (release["prerelease"] | false) ? "yes" : "no",
+                static_cast<unsigned>(release["assets"].size()));
   const String wanted = "remoteterm-display-" + profileName() + ".bin";
-  String selectedTag;
+  const String selectedTag = release["tag_name"] | "";
   String selectedUrl;
-  for (JsonObject release : releases.as<JsonArray>()) {
-    const String tag = release["tag_name"] | "";
-    if (!tag.length() || compareVersions(REMOTETERM_FIRMWARE_VERSION, tag) >= 0) continue;
-    for (JsonObject asset : release["assets"].as<JsonArray>()) {
-      if (String(asset["name"] | "") == wanted) {
-        if (!selectedTag.length() || compareVersions(selectedTag, tag) < 0) {
-          selectedTag = tag;
-          selectedUrl = asset["browser_download_url"] | "";
-        }
-        break;
-      }
+  for (JsonObject asset : release["assets"].as<JsonArray>()) {
+    const String name = asset["name"] | "";
+    Serial.printf("OTA release asset: %s\n", name.c_str());
+    if (name == wanted) {
+      selectedUrl = asset["browser_download_url"] | "";
+      break;
     }
   }
-  if (selectedTag.length() && selectedUrl.length()) {
+  if (selectedTag.length() && selectedUrl.length() && compareVersions(REMOTETERM_FIRMWARE_VERSION, selectedTag) < 0) {
     Serial.printf("OTA selected release: %s asset=%s\n", selectedTag.c_str(), wanted.c_str());
     Serial.printf("OTA update available: %s -> %s\n", REMOTETERM_FIRMWARE_VERSION, selectedTag.c_str());
     downloadAndInstall(selectedUrl, selectedTag);
   } else {
-    Serial.printf("OTA no compatible update found for asset=%s\n", wanted.c_str());
+    Serial.printf("OTA no compatible update found: current=%s release=%s asset=%s\n",
+                  REMOTETERM_FIRMWARE_VERSION, selectedTag.c_str(), wanted.c_str());
   }
   checking = false;
 }
