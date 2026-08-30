@@ -8,10 +8,10 @@
 #include "ui.h"
 #include "ota_update.h"
 
+RuntimeConfig runtimeConfig;
 RemoteTermDisplay lcd;
 AppState appState;
-RemoteTermUI ui(lcd, appState);
-RuntimeConfig runtimeConfig;
+RemoteTermUI ui(lcd, appState, runtimeConfig);
 RemoteTermClient remoteTerm(appState, runtimeConfig);
 
 unsigned long lastWifiAttempt = 0;
@@ -54,6 +54,7 @@ void loop() {
       appState.status = "RemoteTerm";
       Serial.printf("Wi-Fi connected: %s\n", WiFi.localIP().toString().c_str());
       remoteTerm.begin();
+      setupSettingsServer(runtimeConfig);
       otaBegin();
       clientStarted = true;
     } else {
@@ -70,7 +71,12 @@ void loop() {
   if (nowConnected && clientStarted) otaLoop();
 
   int nav = ui.pollChannelGesture();
-  if (nav != 0 && appState.channelCount) {
+  if (nav == 2) {
+    ui.render(true);
+  } else if (nav == 3) {
+    saveRuntimeConfig(runtimeConfig);
+    ESP.restart();
+  } else if (nav != 0 && appState.channelCount) {
     remoteTerm.selectChannel(appState.selectedChannel + nav);
     ui.render(true);
   } else {

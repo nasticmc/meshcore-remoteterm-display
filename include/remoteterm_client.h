@@ -6,7 +6,7 @@
 
 class RemoteTermClient {
  public:
-  RemoteTermClient(AppState& state, const RuntimeConfig& config);
+  RemoteTermClient(AppState& state, RuntimeConfig& config);
   void begin();
   void loop();
   bool refreshChannels();
@@ -16,7 +16,7 @@ class RemoteTermClient {
 
  private:
   AppState& _state;
-  const RuntimeConfig& _config;
+  RuntimeConfig& _config;
   WebSocketsClient _ws;
   unsigned long _lastPoll = 0;
   unsigned long _lastChannelRefresh = 0;

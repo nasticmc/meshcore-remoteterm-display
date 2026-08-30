@@ -9,8 +9,9 @@ void loadRuntimeConfig(RuntimeConfig& config);
 void saveRuntimeConfig(const RuntimeConfig& config);
 void clearRuntimeConfig();
 
-// Runs the local configuration AP until a form is saved. Returns true when the
-// device was restarted after saving new settings.
+// Starts the configuration page on the setup AP.
 bool setupAccessPoint(RuntimeConfig& config);
+// Starts the same configuration page on the normal Wi-Fi interface.
+void setupSettingsServer(RuntimeConfig& config);
 void setupAccessPointLoop();
 bool setupAccessPointActive();

@@ -12,11 +12,11 @@ constexpr uint16_t C_ACCENT = 0x350C;  // #36A167
 constexpr uint16_t C_WARN = 0xDCC5;    // #D99A28
 }
 
-RemoteTermUI::RemoteTermUI(RemoteTermDisplay& display, AppState& state) : _lcd(display), _state(state) {}
+RemoteTermUI::RemoteTermUI(RemoteTermDisplay& display, AppState& state, RuntimeConfig& config) : _lcd(display), _state(state), _config(config) {}
 
 void RemoteTermUI::begin() {
   _lcd.init();
-  _lcd.setRotation(1);
+  _lcd.setRotation(_config.displayRotation);
   _lcd.setBrightness(190);
   _lcd.fillScreen(C_BG);
   _lcd.setTextDatum(lgfx::top_left);
@@ -32,6 +32,8 @@ uint32_t RemoteTermUI::stateHash() const {
   mix(_state.wifiConnected);
   mix(_state.wsConnected);
   mix(_state.apiHealthy);
+  mix(_settingsMode);
+  mix(_config.selectedChannelCount);
   if (_state.messageCount) {
     mix((uint32_t)_state.messages[_state.messageCount - 1].id);
     mix(_state.messages[_state.messageCount - 1].text.length());
@@ -146,9 +148,15 @@ void RemoteTermUI::drawFooter() {
   int w = _lcd.width();
   int h = _lcd.height();
   _lcd.fillRect(0, h - 36, w, 36, C_PANEL);
+  _lcd.fillCircle(16, h - 18, 8, C_MUTED);
+  _lcd.fillCircle(16, h - 18, 3, C_PANEL);
+  _lcd.fillRect(14, h - 31, 5, 5, C_MUTED);
+  _lcd.fillRect(14, h - 10, 5, 5, C_MUTED);
+  _lcd.fillRect(3, h - 20, 5, 5, C_MUTED);
+  _lcd.fillRect(24, h - 20, 5, 5, C_MUTED);
   _lcd.setTextSize(2);
   _lcd.setTextColor(C_MUTED, C_PANEL);
-  _lcd.setCursor(8, h - 27);
+  _lcd.setCursor(31, h - 27);
   _lcd.print("<");
   _lcd.setCursor(w - 18, h - 27);
   _lcd.print(">");
@@ -164,10 +172,48 @@ void RemoteTermUI::drawFooter() {
   _lcd.print(name);
 }
 
+void RemoteTermUI::drawSettings() {
+  const int w = _lcd.width();
+  const int h = _lcd.height();
+  _lcd.fillScreen(C_BG);
+  _lcd.fillRect(0, 0, w, 38, C_PANEL);
+  _lcd.setTextSize(2);
+  _lcd.setTextColor(C_ACCENT, C_PANEL);
+  _lcd.setCursor(10, 10);
+  _lcd.print("CHANNEL SETTINGS");
+  _lcd.setTextSize(1);
+  _lcd.setTextColor(C_MUTED, C_BG);
+  _lcd.setCursor(10, 46);
+  _lcd.print("Tap channels to show or hide them");
+  const size_t count = min(_config.cachedChannelCount, static_cast<size_t>((h - 82) / 25));
+  for (size_t i = 0; i < count; ++i) {
+    const int y = 58 + static_cast<int>(i) * 25;
+    _lcd.drawRect(10, y, 18, 18, C_MUTED);
+    if (_config.channelSelectionConfigured && _config.channelSelected(_config.cachedChannels[i].key))
+      _lcd.fillRect(14, y + 4, 10, 10, C_ACCENT);
+    _lcd.setTextColor(C_TEXT, C_BG);
+    _lcd.setCursor(38, y + 4);
+    _lcd.print(_config.cachedChannels[i].name);
+  }
+  if (!count) {
+    _lcd.setTextColor(C_MUTED, C_BG);
+    _lcd.setCursor(10, 75);
+    _lcd.print("No cached channels yet");
+  }
+  _lcd.fillRect(w - 100, h - 34, 92, 26, C_PANEL);
+  _lcd.setTextColor(C_ACCENT, C_PANEL);
+  _lcd.setCursor(w - 88, h - 26);
+  _lcd.print("SAVE");
+}
+
 void RemoteTermUI::render(bool force) {
   uint32_t h = stateHash();
   if (!force && h == _lastRenderHash) return;
   _lastRenderHash = h;
+  if (_settingsMode) {
+    drawSettings();
+    return;
+  }
   drawHeader();
   drawMessages();
   drawFooter();
@@ -186,6 +232,36 @@ int RemoteTermUI::pollChannelGesture() {
   if (touched || !_touchDown) return 0;
 
   _touchDown = false;
+  if (_settingsMode) {
+    const int x = _touchStartX;
+    const int y = _touchStartY;
+    if (x >= _lcd.width() - 110 && y >= _lcd.height() - 45) {
+      _settingsMode = false;
+      return 3;
+    }
+    const int index = (y - 58) / 25;
+    if (y >= 58 && index >= 0 && index < static_cast<int>(_config.cachedChannelCount)) {
+      const String& key = _config.cachedChannels[index].key;
+      size_t found = _config.selectedChannelCount;
+      for (size_t i = 0; i < _config.selectedChannelCount; ++i)
+        if (_config.selectedChannelKeys[i] == key) { found = i; break; }
+      if (found < _config.selectedChannelCount) {
+        for (size_t i = found + 1; i < _config.selectedChannelCount; ++i)
+          _config.selectedChannelKeys[i - 1] = _config.selectedChannelKeys[i];
+        --_config.selectedChannelCount;
+      } else if (_config.selectedChannelCount < MAX_SELECTED_CHANNELS) {
+        _config.selectedChannelKeys[_config.selectedChannelCount++] = key;
+      }
+      _config.channelSelectionConfigured = true;
+      render(true);
+    }
+    return 0;
+  }
+  if (_touchStartX < 34 && _touchStartY >= _lcd.height() - 50) {
+    _settingsMode = true;
+    render(true);
+    return 2;
+  }
   int dx = (int)x - _touchStartX;
   unsigned long held = millis() - _touchStartAt;
   if (held > 1200) return 0;

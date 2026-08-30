@@ -27,6 +27,14 @@
 #define OTA_CHECK_INTERVAL_MS 21600000UL
 #define OTA_CONNECT_TIMEOUT_MS 5000
 #define OTA_READ_TIMEOUT_MS 15000
+#define MAX_CONFIG_CHANNELS 64
+#define MAX_SELECTED_CHANNELS 64
+
+#if REMOTETERM_DISPLAY_PROFILE == 1042
+#define DEFAULT_DISPLAY_ROTATION 2
+#else
+#define DEFAULT_DISPLAY_ROTATION 1
+#endif
 
 
 
@@ -38,9 +46,23 @@ struct RuntimeConfig {
   bool remoteTls = REMOTETERM_TLS;
   String remoteUsername;
   String remotePassword;
+  uint8_t displayRotation = DEFAULT_DISPLAY_ROTATION;
+  String selectedChannelKeys[MAX_SELECTED_CHANNELS];
+  size_t selectedChannelCount = 0;
+  bool channelSelectionConfigured = false;
+
+  struct CachedChannel { String key; String name; };
+  CachedChannel cachedChannels[MAX_CONFIG_CHANNELS];
+  size_t cachedChannelCount = 0;
 
   bool hasWifi() const { return wifiSsid.length() > 0; }
   bool hasRemoteTerm() const { return remoteHost.length() > 0; }
+  bool channelSelected(const String& key) const {
+    if (!channelSelectionConfigured) return true;
+    for (size_t i = 0; i < selectedChannelCount; ++i)
+      if (selectedChannelKeys[i] == key) return true;
+    return false;
+  }
 };
 
 void loadRuntimeConfig(RuntimeConfig& config);

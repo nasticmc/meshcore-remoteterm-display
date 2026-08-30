@@ -16,6 +16,7 @@ Receive-only MeshCore channel viewer for the Freenove ESP32-S3 Display (FNK0104B
 - HTTP/WS and HTTPS/WSS configuration.
 - Uses the EastMesh dark-mode theme: `#222222` background, `#303030` panels,
   `#E6EAF0` text, `#9AA4B2` muted text, and `#36A167` accent green.
+- The lower-left gear button opens an on-device channel settings screen.
 
 ## Supported hardware
 
@@ -44,7 +45,8 @@ The 4-inch target uses the Freenove-compatible RGB colour order and 80 MHz write
 
    `include/config.example.h` -> `include/config.h`
 
-2. Edit the optional compile-time defaults in `include/config.h`.
+2. Edit the optional compile-time defaults in `include/config.h`, or use the
+   device settings page after Wi-Fi is configured.
 
 Example:
 
@@ -88,6 +90,13 @@ pio run -e fnk0104s -t upload
 - Swipe right: previous channel
 - Tap `<` in the footer: previous channel
 - Tap `>` in the footer: next channel
+- Tap the gear in the lower-left footer: open channel settings
+
+In channel settings, tap rows to toggle channels and tap `SAVE`. The selected
+channel keys are stored in NVS and the device restarts. The web settings page
+also provides display rotation, channel selection, and Select all / Clear all
+controls. Rotation defaults to 180° for the 2.8-inch target and 90° landscape
+for the 4-inch target.
 
 The newest messages are shown at the bottom of the visible list.
 

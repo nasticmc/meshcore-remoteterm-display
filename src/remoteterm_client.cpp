@@ -33,7 +33,7 @@ String pickString(JsonVariantConst obj, const char* a, const char* b = nullptr, 
 }
 }
 
-RemoteTermClient::RemoteTermClient(AppState& state, const RuntimeConfig& config) : _state(state), _config(config) {}
+RemoteTermClient::RemoteTermClient(AppState& state, RuntimeConfig& config) : _state(state), _config(config) {}
 
 String RemoteTermClient::baseUrl() const {
   String s = _config.remoteTls ? "https://" : "http://";
@@ -97,13 +97,17 @@ bool RemoteTermClient::parseChannels(const String& json) {
     oldKey = _state.channels[_state.selectedChannel].key;
 
   _state.channelCount = 0;
+  _config.cachedChannelCount = 0;
   for (JsonVariantConst item : arr) {
     if (_state.channelCount >= MAX_CHANNELS) break;
     String key = pickString(item, "key", "channel_key", "conversation_key");
     String name = pickString(item, "name", "channel_name", "label");
     if (!key.length()) continue;
     if (!name.length()) name = key.substring(0, min((size_t)8, key.length()));
-    _state.channels[_state.channelCount++] = {key, name};
+    if (_config.cachedChannelCount < MAX_CONFIG_CHANNELS)
+      _config.cachedChannels[_config.cachedChannelCount++] = {key, name};
+    if (_config.channelSelected(key) && _state.channelCount < MAX_CHANNELS)
+      _state.channels[_state.channelCount++] = {key, name};
   }
 
   if (_state.channelCount == 0) {
