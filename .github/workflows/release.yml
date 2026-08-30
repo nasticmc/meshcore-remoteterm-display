@@ -1,0 +1,42 @@
+name: Build and publish release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install PlatformIO
+        run: python -m pip install platformio
+
+      - name: Build both board profiles
+        run: |
+          printf '#pragma once\n#define REMOTETERM_FIRMWARE_VERSION "%s"\n' "${{ github.ref_name }}" > include/firmware_version.h
+          pio run -e fnk0104b
+          pio run -e fnk0104s
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release
+          cp .pio/build/fnk0104b/firmware.bin release/remoteterm-display-fnk0104b.bin
+          cp .pio/build/fnk0104s/firmware.bin release/remoteterm-display-fnk0104s.bin
+          sha256sum release/*.bin > release/SHA256SUMS
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" release/* --title "${{ github.ref_name }}" --generate-notes

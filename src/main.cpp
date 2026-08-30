@@ -6,6 +6,7 @@
 #include "models.h"
 #include "remoteterm_client.h"
 #include "ui.h"
+#include "ota_update.h"
 
 RemoteTermDisplay lcd;
 AppState appState;
@@ -53,6 +54,7 @@ void loop() {
       appState.status = "RemoteTerm";
       Serial.printf("Wi-Fi connected: %s\n", WiFi.localIP().toString().c_str());
       remoteTerm.begin();
+      otaBegin();
       clientStarted = true;
     } else {
       appState.wsConnected = false;
@@ -65,6 +67,7 @@ void loop() {
 
   if (!nowConnected && !setupAccessPointActive()) connectWifi();
   if (nowConnected && clientStarted) remoteTerm.loop();
+  if (nowConnected && clientStarted) otaLoop();
 
   int nav = ui.pollChannelGesture();
   if (nav != 0 && appState.channelCount) {
