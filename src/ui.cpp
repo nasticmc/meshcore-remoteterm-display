@@ -50,16 +50,17 @@ String RemoteTermUI::shortTime(const String& iso) const {
 
 void RemoteTermUI::drawHeader() {
   int w = _lcd.width();
-  _lcd.fillRect(0, 0, w, 36, C_PANEL);
-  _lcd.setTextSize(2);
+  _lcd.fillRect(0, 0, w, 42, C_PANEL);
+  _lcd.fillRect(0, 40, w, 2, C_ACCENT);
+  _lcd.setTextSize(w >= 400 ? 2 : 1);
   _lcd.setTextColor(C_TEXT, C_PANEL);
-  _lcd.setCursor(8, 9);
-  _lcd.print("MeshCore RemoteTerm Display");
+  _lcd.setCursor(10, w >= 400 ? 10 : 8);
+  _lcd.print("MESHCORE REMOTETERM");
 
   String state = _state.wsConnected ? "LIVE" : (_state.wifiConnected ? "POLL" : "WIFI");
   _lcd.setTextColor(_state.wsConnected ? C_ACCENT : C_WARN, C_PANEL);
   int tw = _lcd.textWidth(state);
-  _lcd.setCursor(w - tw - 8, 9);
+  _lcd.setCursor(w - tw - 10, w >= 400 ? 10 : 8);
   _lcd.print(state);
 }
 
@@ -87,8 +88,8 @@ void RemoteTermUI::drawWrapped(const String& text, int x, int& y, int width, int
 void RemoteTermUI::drawMessages() {
   int w = _lcd.width();
   int h = _lcd.height();
-  int top = 39;
-  int bottom = h - 39;
+  int top = 47;
+  int bottom = h - 42;
   _lcd.fillRect(0, top, w, bottom - top, C_BG);
 
   if (_state.channelCount == 0) {
@@ -120,45 +121,49 @@ void RemoteTermUI::drawMessages() {
   }
   start++;
 
-  int y = top + 4;
+  int y = top + 6;
   for (size_t i = start; i < _state.messageCount && y < bottom - 20; ++i) {
     const MessageInfo& m = _state.messages[i];
     String sender = m.sender.length() ? m.sender : (m.outgoing ? "You" : "MeshCore");
     String tm = shortTime(m.receivedAt);
+    int cardHeight = 38 + min(3, max(1, (int)m.text.length() / max(18, w / 8))) * 15;
+    if (y + cardHeight > bottom) break;
+    _lcd.fillRoundRect(5, y, w - 10, cardHeight - 4, 6, C_PANEL);
+    _lcd.fillRect(5, y + 7, 3, cardHeight - 18, m.outgoing ? C_ACCENT : C_MUTED);
 
     _lcd.setTextSize(1);
-    _lcd.setTextColor(m.outgoing ? C_ACCENT : C_TEXT, C_BG);
-    _lcd.setCursor(8, y);
+    _lcd.setTextColor(m.outgoing ? C_ACCENT : C_TEXT, C_PANEL);
+    _lcd.setCursor(15, y + 7);
     _lcd.print(sender);
     if (tm.length()) {
-      _lcd.setTextColor(C_MUTED, C_BG);
+      _lcd.setTextColor(C_MUTED, C_PANEL);
       int tw = _lcd.textWidth(tm);
-      _lcd.setCursor(w - tw - 8, y);
+      _lcd.setCursor(w - tw - 14, y + 7);
       _lcd.print(tm);
     }
-    y += 13;
-    drawWrapped(m.text, 8, y, w - 16, 3, C_TEXT, 1);
-    y += 5;
-    _lcd.drawFastHLine(8, y, w - 16, C_PANEL);
-    y += 5;
+    y += 20;
+    drawWrapped(m.text, 15, y, w - 25, 3, C_TEXT, 1);
+    y += cardHeight - 39;
+    y += 6;
   }
 }
 
 void RemoteTermUI::drawFooter() {
   int w = _lcd.width();
   int h = _lcd.height();
-  _lcd.fillRect(0, h - 36, w, 36, C_PANEL);
-  _lcd.fillCircle(16, h - 18, 8, C_MUTED);
-  _lcd.fillCircle(16, h - 18, 3, C_PANEL);
-  _lcd.fillRect(14, h - 31, 5, 5, C_MUTED);
-  _lcd.fillRect(14, h - 10, 5, 5, C_MUTED);
-  _lcd.fillRect(3, h - 20, 5, 5, C_MUTED);
-  _lcd.fillRect(24, h - 20, 5, 5, C_MUTED);
-  _lcd.setTextSize(2);
+  _lcd.fillRect(0, h - 40, w, 40, C_PANEL);
+  _lcd.fillRect(0, h - 40, w, 2, C_ACCENT);
+  _lcd.fillCircle(17, h - 20, 8, C_MUTED);
+  _lcd.fillCircle(17, h - 20, 3, C_PANEL);
+  _lcd.fillRect(15, h - 33, 5, 5, C_MUTED);
+  _lcd.fillRect(15, h - 12, 5, 5, C_MUTED);
+  _lcd.fillRect(4, h - 22, 5, 5, C_MUTED);
+  _lcd.fillRect(25, h - 22, 5, 5, C_MUTED);
+  _lcd.setTextSize(w >= 400 ? 2 : 1);
   _lcd.setTextColor(C_MUTED, C_PANEL);
-  _lcd.setCursor(31, h - 27);
+  _lcd.setCursor(32, h - 28);
   _lcd.print("<");
-  _lcd.setCursor(w - 18, h - 27);
+  _lcd.setCursor(w - (w >= 400 ? 18 : 14), h - 28);
   _lcd.print(">");
 
   String name = "--";
@@ -168,7 +173,7 @@ void RemoteTermUI::drawFooter() {
 
   _lcd.setTextColor(C_TEXT, C_PANEL);
   int tw = _lcd.textWidth(name);
-  _lcd.setCursor(max(28, (w - tw) / 2), h - 27);
+  _lcd.setCursor(max(38, (w - tw) / 2), h - 28);
   _lcd.print(name);
 }
 
