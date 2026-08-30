@@ -95,7 +95,8 @@ pio run -e fnk0104s -t upload
 In channel settings, tap rows to toggle channels and tap `SAVE`. The selected
 channel keys are stored in NVS and the device restarts. The web settings page
 also provides display rotation, channel selection, and Select all / Clear all
-controls. Rotation defaults to 180° for the 2.8-inch target and 90° landscape
+controls. Rotation defaults to the corrected clockwise landscape orientation (rotation
+value 3) for the 2.8-inch target and 90° landscape
 for the 4-inch target.
 
 The newest messages are shown at the bottom of the visible list.

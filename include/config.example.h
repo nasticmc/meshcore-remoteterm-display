@@ -32,5 +32,5 @@
 // Connect to RemoteTerm-XXXX with password "configure", then open 192.168.4.1.
 #define WIFI_CONNECT_TIMEOUT_MS 30000UL
 #define SETUP_AP_PASSWORD "configure"
-#define DEFAULT_DISPLAY_ROTATION 2
+#define DEFAULT_DISPLAY_ROTATION 3
 #define OTA_CHECK_INTERVAL_MS 21600000UL
