@@ -197,6 +197,8 @@ void loop() {
   } else if (nav == 3) {
     saveRuntimeConfig(runtimeConfig);
     ESP.restart();
+  } else if (nav == 4 || nav == 5) {
+    ui.render(true);
   } else if (nav != 0 && appState.channelCount) {
     remoteTerm.selectChannel(appState.selectedChannel + nav);
     ui.render(true);

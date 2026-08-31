@@ -20,6 +20,10 @@ class RemoteTermUI {
   unsigned long _touchStartAt = 0;
   bool _settingsMode = false;
   int _messageScroll = 0;
+  bool _clockMode = false;
+  unsigned long _lastInteractionAt = 0;
+  uint16_t _lastTouchX = 0;
+  uint16_t _lastTouchY = 0;
 
   uint32_t stateHash() const;
   void drawHeader();
@@ -28,6 +32,7 @@ class RemoteTermUI {
   void drawSettings();
   void drawClock();
   void drawButton(int x, int y, int width, int height, const char* label, bool accent = false);
+  void showClockMode();
   void drawWrapped(const String& text, int x, int& y, int width, int maxLines, uint16_t color, float fontSize);
   String shortTime(const String& iso) const;
 };

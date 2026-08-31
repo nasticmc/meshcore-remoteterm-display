@@ -24,6 +24,7 @@ void RemoteTermUI::begin() {
   _lcd.fillScreen(C_BG);
   _lcd.setTextDatum(lgfx::top_left);
   _lcd.setFont(&fonts::Font0);
+  _lastInteractionAt = millis();
 }
 
 uint32_t RemoteTermUI::stateHash() const {
@@ -37,6 +38,7 @@ uint32_t RemoteTermUI::stateHash() const {
   mix(_state.apiHealthy);
   mix(_settingsMode);
   mix(_config.selectedChannelCount);
+  mix(_clockMode);
   mix(_state.timeValid);
   mix(_state.timeEpoch);
   if (_state.messageCount) {
@@ -71,6 +73,12 @@ void RemoteTermUI::drawClock() {
     _lcd.drawString(WiFi.status() == WL_CONNECTED ? "SYNCING TIME" : "WAITING FOR WI-FI", w / 2, h / 2);
   }
   _lcd.setTextDatum(lgfx::top_left);
+}
+
+void RemoteTermUI::showClockMode() {
+  _clockMode = true;
+  _messageScroll = 0;
+  render(true);
 }
 
 String RemoteTermUI::shortTime(const String& iso) const {
@@ -263,6 +271,12 @@ void RemoteTermUI::drawSettings() {
 }
 
 void RemoteTermUI::render(bool force) {
+  if (!_clockMode && _state.messageCount && _lastInteractionAt &&
+      millis() - _lastInteractionAt >= MESSAGE_VIEW_IDLE_MS) {
+    _clockMode = true;
+    _messageScroll = 0;
+    force = true;
+  }
   uint32_t h = stateHash();
   if (!force && h == _lastRenderHash) return;
   _lastRenderHash = h;
@@ -271,7 +285,7 @@ void RemoteTermUI::render(bool force) {
     return;
   }
   drawHeader();
-  if (_state.messageCount == 0) drawClock();
+  if (_state.messageCount == 0 || _clockMode) drawClock();
   else drawMessages();
   drawFooter();
 }
@@ -283,12 +297,22 @@ int RemoteTermUI::pollChannelGesture() {
     _touchDown = true;
     _touchStartX = x;
     _touchStartY = y;
+    _lastTouchX = x;
+    _lastTouchY = y;
     _touchStartAt = millis();
+    _lastInteractionAt = millis();
     return 0;
   }
-  if (touched || !_touchDown) return 0;
+  if (touched) {
+    _lastTouchX = x;
+    _lastTouchY = y;
+    return 0;
+  }
+  if (!_touchDown) return 0;
 
   _touchDown = false;
+  x = _lastTouchX;
+  y = _lastTouchY;
   if (_settingsMode) {
     const int x = _touchStartX;
     const int y = _touchStartY;
@@ -312,6 +336,12 @@ int RemoteTermUI::pollChannelGesture() {
       _config.channelSelectionConfigured = true;
       render(true);
     }
+    return 0;
+  }
+  if (_clockMode && _touchStartY >= 47 && _touchStartY < _lcd.height() - 34) {
+    _clockMode = false;
+    _lastInteractionAt = millis();
+    render(true);
     return 0;
   }
   const int footerY = _lcd.height() - 34;
@@ -351,13 +381,7 @@ int RemoteTermUI::pollChannelGesture() {
     render(true);
     return 0;
   }
-  if (abs(dx) > 45) {
-    _messageScroll = 0;
-    return dx < 0 ? +1 : -1;
-  }
-  if (_touchStartY >= _lcd.height() - 55) {
-    if (_touchStartX < _lcd.width() / 3) return -1;
-    if (_touchStartX > (_lcd.width() * 2) / 3) return +1;
-  }
+  // Channel navigation is deliberately button-only. No broad horizontal
+  // swipe region is allowed to change the selected channel.
   return 0;
 }
