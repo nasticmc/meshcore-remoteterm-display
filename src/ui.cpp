@@ -18,7 +18,7 @@ RemoteTermUI::RemoteTermUI(RemoteTermDisplay& display, AppState& state, RuntimeC
 
 void RemoteTermUI::begin() {
   _lcd.init();
-  _lcd.setTouchRotation(_config.displayRotation);
+  _lcd.setTouchRotation(0);
   _lcd.setRotation(_config.displayRotation);
   _lcd.setBrightness(190);
   _lcd.fillScreen(C_BG);

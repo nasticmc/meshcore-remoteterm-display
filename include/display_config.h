@@ -33,7 +33,11 @@ class RemoteTermDisplay : public lgfx::LGFX_Device {
  public:
   void setTouchRotation(uint8_t rotation) {
     auto cfg = _touch.config();
-    cfg.offset_rotation = rotation & 7;
+    // Panel_Device::convertRawXY already combines the panel rotation with
+    // this offset. Keep the touch hardware offset neutral so the runtime
+    // display rotation is applied exactly once.
+    (void)rotation;
+    cfg.offset_rotation = 0;
     _touch.config(cfg);
   }
 
