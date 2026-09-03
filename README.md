@@ -95,7 +95,8 @@ pio run -e fnk0104s -t upload
 The footer now shows bounded action buttons: `SET`, `UP`, `DOWN`, `PREV`, and
 `NEXT`. Touch actions are accepted only inside those button rectangles; the
 message viewport accepts vertical swipes for scrolling but does not contain
-the footer controls.
+the footer controls. The display redraw is throttled to the visible clock
+resolution rather than refreshing continuously.
 
 In channel settings, tap rows to toggle channels and tap `SAVE`. The selected
 channel keys are stored in NVS and the device restarts. The web settings page

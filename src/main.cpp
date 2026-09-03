@@ -19,6 +19,7 @@ unsigned long lastWifiAttempt = 0;
 bool clientStarted = false;
 unsigned long wifiStartedAt = 0;
 unsigned long lastClockSync = 0;
+unsigned long lastClockRead = 0;
 String serialLine;
 
 void serialHelp() {
@@ -139,6 +140,8 @@ void updateClock() {
     tzset();
     lastClockSync = millis();
   }
+  if (lastClockRead != 0 && millis() - lastClockRead < 500UL) return;
+  lastClockRead = millis();
   struct tm now;
   if (getLocalTime(&now, 10)) {
     appState.timeValid = now.tm_year >= (2024 - 1900);

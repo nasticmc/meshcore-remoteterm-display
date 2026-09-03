@@ -40,7 +40,9 @@ uint32_t RemoteTermUI::stateHash() const {
   mix(_config.selectedChannelCount);
   mix(_clockMode);
   mix(_state.timeValid);
-  mix(_state.timeEpoch);
+  // The clock displays minutes, so do not invalidate the whole screen on
+  // every loop as timeEpoch advances by seconds.
+  mix(_state.timeEpoch / 60U);
   if (_state.messageCount) {
     mix((uint32_t)_state.messages[_state.messageCount - 1].id);
     mix(_state.messages[_state.messageCount - 1].text.length());
