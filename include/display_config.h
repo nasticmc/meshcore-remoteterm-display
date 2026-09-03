@@ -33,11 +33,10 @@ class RemoteTermDisplay : public lgfx::LGFX_Device {
  public:
   void setTouchRotation(uint8_t rotation) {
     auto cfg = _touch.config();
-    // Panel_Device::convertRawXY already combines the panel rotation with
-    // this offset. Keep the touch hardware offset neutral so the runtime
-    // display rotation is applied exactly once.
-    (void)rotation;
-    cfg.offset_rotation = 0;
+    // Panel_Device::convertRawXY combines panel rotation with this offset.
+    // FNK0104B's touch controller is physically mounted 180 degrees opposite
+    // to the LCD coordinate system; FNK0104S does not need that compensation.
+    cfg.offset_rotation = (REMOTETERM_DISPLAY_PROFILE == 1042) ? 2 : 0;
     _touch.config(cfg);
   }
 
