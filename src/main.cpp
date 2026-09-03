@@ -22,6 +22,14 @@ unsigned long lastClockSync = 0;
 unsigned long lastClockRead = 0;
 String serialLine;
 
+void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+  if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+    Serial.printf("Wi-Fi disconnected: reason=%d\n", info.wifi_sta_disconnected.reason);
+  } else if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+    Serial.printf("Wi-Fi event got IP: %s\n", WiFi.localIP().toString().c_str());
+  }
+}
+
 void serialHelp() {
   Serial.println("RemoteTerm serial configuration");
   Serial.println("  help                         Show this help");
@@ -127,6 +135,7 @@ void connectWifi() {
   lastWifiAttempt = millis();
 
   WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
   WiFi.setHostname(DEVICE_NAME);
   WiFi.begin(runtimeConfig.wifiSsid.c_str(), runtimeConfig.wifiPassword.c_str());
   if (wifiStartedAt == 0) wifiStartedAt = millis();
@@ -154,6 +163,7 @@ void updateClock() {
 void setup() {
   Serial.begin(115200);
   delay(250);
+  WiFi.onEvent(onWiFiEvent);
   loadRuntimeConfig(runtimeConfig);
   Serial.println("Type 'help' for serial configuration commands");
   ui.begin();
